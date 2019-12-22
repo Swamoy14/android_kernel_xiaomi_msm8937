@@ -9,4 +9,5 @@ ifeq ($(CONFIG_MACH_XIAOMI_LAND),y)
 obj-$(CONFIG_MSMB_CAMERA) += camera_v2-land/
 else
 obj-$(CONFIG_MSMB_CAMERA) += camera_v2/
+endif
 obj-y += sde/
