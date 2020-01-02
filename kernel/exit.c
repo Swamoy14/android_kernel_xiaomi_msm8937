@@ -53,8 +53,8 @@
 #include <linux/oom.h>
 #include <linux/writeback.h>
 #include <linux/shm.h>
-#include <linux/kcov.h>
-#include <linux/cpufreq.h>
+
+#include "sched/tune.h"
 
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -170,14 +170,11 @@ static void delayed_put_task_struct(struct rcu_head *rhp)
 	put_task_struct(tsk);
 }
 
-
 void release_task(struct task_struct *p)
 {
 	struct task_struct *leader;
 	int zap_leader;
-#ifdef CONFIG_CPU_FREQ_STAT
-	cpufreq_task_stats_exit(p);
-#endif
+
 repeat:
 	/* don't need to get the RCU readlock here - the process is dead and
 	 * can't be modifying its own credentials. But shut RCU-lockdep up */
@@ -686,7 +683,6 @@ void do_exit(long code)
 	TASKS_RCU(int tasks_rcu_i);
 
 	profile_task_exit(tsk);
-	kcov_task_exit(tsk);
 
 	WARN_ON(blk_needs_flush_plug(tsk));
 
