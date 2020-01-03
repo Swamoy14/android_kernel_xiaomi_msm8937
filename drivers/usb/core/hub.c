@@ -2328,8 +2328,6 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
 				dev_err(&udev->dev,
 					"set a_alt_hnp_support failed: %d\n",
 					err);
->>>>>>> 28a6f12c40ef54f3fc30b8a579e24972720aed79
-			}
 		}
 #endif
 	return err;
