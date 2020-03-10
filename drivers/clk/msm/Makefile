@@ -22,10 +22,12 @@ obj-$(CONFIG_ARCH_MDM9640)	+= clock-a7.o
 # MDM9650
 obj-$(CONFIG_ARCH_MDM9650)	+= clock-a7.o
 obj-$(CONFIG_ARCH_MDM9650)	+= clock-gcc-9650.o
-
-# SDX20
-obj-$(CONFIG_ARCH_SDX20)	+= clock-a7.o
 obj-$(CONFIG_ARCH_SDX20)	+= clock-gcc-9650.o
+obj-$(CONFIG_ARCH_MDM9650)	+= clock-a7.o
+
+# MDMCALIFORNIUM
+obj-$(CONFIG_ARCH_MDMCALIFORNIUM)	+= clock-a7.o
+obj-$(CONFIG_ARCH_MDMCALIFORNIUM)	+= clock-gcc-californium.o
 
 # MSM8909
 obj-$(CONFIG_ARCH_MSM8909)	+= clock-a7.o

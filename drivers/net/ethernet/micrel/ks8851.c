@@ -637,9 +637,8 @@ static void ks8851_rx_pkts3(struct ks8851_net *ks)
 	/* set dma read address */
 	ks8851_wrreg16(ks, KS_RXFDPR, RXFDPR_RXFPAI | 0x00);
 
-	/* start the packet dma process, and set auto-dequeue rx */
-	ks8851_wrreg16(ks, KS_RXQCR, ks->rc_rxqcr
-				   | RXQCR_SDA | RXQCR_ADRFE);
+	/* start DMA access */
+	ks8851_wrreg16(ks, KS_RXQCR, ks->rc_rxqcr | RXQCR_SDA);
 
 	/* read all frames from rx fifo */
 	ks8851_rdfifo(ks, buf, rxfifosize);
@@ -690,7 +689,9 @@ static void ks8851_rx_pkts3(struct ks8851_net *ks)
 				break;
 			}
 	}
-	ks8851_wrreg16(ks, KS_RXQCR, ks->rc_rxqcr);
+
+	/* end DMA access and dequeue packet */
+	ks8851_wrreg16(ks, KS_RXQCR, ks->rc_rxqcr | RXQCR_RRXEF);
 	kfree(buf);
 }
 
@@ -1687,6 +1688,7 @@ static int ks8851_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, ks);
 
+	netif_carrier_off(ks->netdev);
 	ndev->if_port = IF_PORT_100BASET;
 	ndev->netdev_ops = &ks8851_netdev_ops;
 	ndev->irq = spi->irq;
@@ -1725,14 +1727,6 @@ static int ks8851_probe(struct spi_device *spi)
 	ks8851_read_selftest(ks);
 	ks8851_init_mac(ks);
 
-	ret = request_threaded_irq(spi->irq, NULL, ks8851_irq,
-				   IRQF_TRIGGER_LOW | IRQF_ONESHOT,
-				   ndev->name, ks);
-	if (ret < 0) {
-		dev_err(&spi->dev, "failed to get irq\n");
-		goto err_irq;
-	}
-
 	ret = register_netdev(ndev);
 	if (ret) {
 		dev_err(&spi->dev, "failed to register network device\n");
@@ -1745,14 +1739,11 @@ static int ks8851_probe(struct spi_device *spi)
 
 	return 0;
 
-
 err_netdev:
 	free_irq(ndev->irq, ks);
-
-err_irq:
+err_id:
 	if (gpio_is_valid(gpio))
 		gpio_set_value(gpio, 0);
-err_id:
 err_gpio:
 	free_netdev(ndev);
 	return ret;

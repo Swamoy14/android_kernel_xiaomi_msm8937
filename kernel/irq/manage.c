@@ -311,6 +311,9 @@ irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify)
 	desc->affinity_notify = notify;
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 
+	if (!notify && old_notify)
+		cancel_work_sync(&old_notify->work);
+
 	if (old_notify) {
 		cancel_work_sync(&old_notify->work);
 		kref_put(&old_notify->kref, old_notify->release);
@@ -792,7 +795,7 @@ irq_thread_check_affinity(struct irq_desc *desc, struct irqaction *action)
 	 * This code is triggered unconditionally. Check the affinity
 	 * mask pointer. For CPU_MASK_OFFSTACK=n this is optimized out.
 	 */
-	if (desc->irq_data.affinity)
+	if (cpumask_available(desc->irq_data.affinity))
 		cpumask_copy(mask, desc->irq_data.affinity);
 	else
 		valid = false;
