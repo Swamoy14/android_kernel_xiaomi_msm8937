@@ -1952,3 +1952,4 @@ u32 drm_vblank_no_hw_counter(struct drm_device *dev, unsigned int pipe)
 	return 0;
 }
 EXPORT_SYMBOL(drm_vblank_no_hw_counter);
+

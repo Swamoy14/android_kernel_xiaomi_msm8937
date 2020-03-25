@@ -727,3 +727,4 @@ void intel_teardown_gmbus(struct drm_device *dev)
 		i2c_del_adapter(&bus->adapter);
 	}
 }
+

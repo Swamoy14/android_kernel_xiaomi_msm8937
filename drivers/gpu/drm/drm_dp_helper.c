@@ -788,3 +788,4 @@ void drm_dp_aux_unregister(struct drm_dp_aux *aux)
 	i2c_del_adapter(&aux->ddc);
 }
 EXPORT_SYMBOL(drm_dp_aux_unregister);
+
