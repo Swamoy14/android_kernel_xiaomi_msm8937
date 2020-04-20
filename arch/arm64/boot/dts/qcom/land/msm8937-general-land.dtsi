@@ -454,3 +454,7 @@
 		};
 	};
 };
+
+&apps_iommu {
+	qcom,no-aarch64;
+};
