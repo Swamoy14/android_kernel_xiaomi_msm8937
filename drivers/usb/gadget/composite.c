@@ -772,18 +772,8 @@ static int set_config(struct usb_composite_dev *cdev,
 	struct usb_gadget	*gadget = cdev->gadget;
 	struct usb_configuration *c = NULL;
 	int			result = -EINVAL;
+	unsigned		power = gadget_is_otg(gadget) ? 8 : 100;
 	int			tmp;
-
-	/*
-	 * ignore 2nd time SET_CONFIGURATION
-	 * only for same config value twice.
-	 */
-	if (cdev->config && (cdev->config->bConfigurationValue == number)) {
-		DBG(cdev, "already in the same config with value %d\n",
-				number);
-		return 0;
-	}
-
 	if (number) {
 		list_for_each_entry(c, &cdev->configs, list) {
 			if (c->bConfigurationValue == number) {
@@ -805,27 +795,19 @@ static int set_config(struct usb_composite_dev *cdev,
 			reset_config(cdev);
 		result = 0;
 	}
-
 	INFO(cdev, "%s config #%d: %s\n",
 	     usb_speed_string(gadget->speed),
 	     number, c ? c->label : "unconfigured");
-
 	if (!c)
 		goto done;
-
 	usb_gadget_set_state(gadget, USB_STATE_CONFIGURED);
 	cdev->config = c;
-	c->num_ineps_used = 0;
-	c->num_outeps_used = 0;
-
 	/* Initialize all interfaces by setting them to altsetting zero. */
 	for (tmp = 0; tmp < MAX_CONFIG_INTERFACES; tmp++) {
 		struct usb_function	*f = c->interface[tmp];
 		struct usb_descriptor_header **descriptors;
-
 		if (!f)
 			break;
-
 		/*
 		 * Record which endpoints are used by the function. This is used
 		 * to dispatch control requests targeted at that endpoint to the
@@ -834,12 +816,6 @@ static int set_config(struct usb_composite_dev *cdev,
 		 */
 		switch (gadget->speed) {
 		case USB_SPEED_SUPER:
-			if (!f->ss_descriptors) {
-				pr_err("%s(): No SS desc for function:%s\n",
-							__func__, f->name);
-				usb_gadget_set_state(gadget, USB_STATE_ADDRESS);
-				return -EINVAL;
-			}
 			descriptors = f->ss_descriptors;
 			break;
 		case USB_SPEED_HIGH:
@@ -848,33 +824,23 @@ static int set_config(struct usb_composite_dev *cdev,
 		default:
 			descriptors = f->fs_descriptors;
 		}
-
 		for (; *descriptors; ++descriptors) {
 			struct usb_endpoint_descriptor *ep;
 			int addr;
-
 			if ((*descriptors)->bDescriptorType != USB_DT_ENDPOINT)
 				continue;
-
 			ep = (struct usb_endpoint_descriptor *)*descriptors;
 			addr = ((ep->bEndpointAddress & 0x80) >> 3)
 			     |  (ep->bEndpointAddress & 0x0f);
 			set_bit(addr, f->endpoints);
-			if (usb_endpoint_dir_in(ep))
-				c->num_ineps_used++;
-			else
-				c->num_outeps_used++;
 		}
-
 		result = f->set_alt(f, tmp, 0);
 		if (result < 0) {
-			DBG(cdev, "interface %d (%s/%pK) alt 0 --> %d\n",
+			DBG(cdev, "interface %d (%s/%p) alt 0 --> %d\n",
 					tmp, f->name, f, result);
-
 			reset_config(cdev);
 			goto done;
 		}
-
 		if (result == USB_GADGET_DELAYED_STATUS) {
 			DBG(cdev,
 			 "%s: interface %d (%s) requested delayed status\n",
@@ -884,9 +850,14 @@ static int set_config(struct usb_composite_dev *cdev,
 					cdev->delayed_status);
 		}
 	}
-
+	/* when we return, be sure our power usage is valid */
+	power = c->MaxPower ? c->MaxPower : CONFIG_USB_GADGET_VBUS_DRAW;
 done:
-	usb_gadget_vbus_draw(gadget, USB_VBUS_DRAW(gadget->speed));
+	if (power <= USB_SELF_POWER_VBUS_MAX_DRAW)
+		usb_gadget_set_selfpowered(gadget);
+	else
+		usb_gadget_clear_selfpowered(gadget);
+	usb_gadget_vbus_draw(gadget, power);
 	if (result >= 0 && cdev->delayed_status)
 		result = USB_GADGET_DELAYED_STATUS;
 	return result;
@@ -2336,6 +2307,7 @@ composite_suspend(struct usb_gadget *gadget)
 	cdev->suspended = 1;
 	spin_unlock_irqrestore(&cdev->lock, flags);
 
+	usb_gadget_set_selfpowered(gadget);
 	usb_gadget_vbus_draw(gadget, 2);
 }
 
@@ -2344,53 +2316,26 @@ composite_resume(struct usb_gadget *gadget)
 {
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	struct usb_function		*f;
-	int ret;
-	unsigned long			flags;
-
+	u16				maxpower;
 	/* REVISIT:  should we have config level
 	 * suspend/resume callbacks?
 	 */
 	DBG(cdev, "resume\n");
 	if (cdev->driver->resume)
 		cdev->driver->resume(cdev);
-
-	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->config) {
 		list_for_each_entry(f, &cdev->config->functions, list) {
-			if (f->func_wakeup_pending) {
-				ret = usb_func_wakeup_int(f);
-				if (ret) {
-					if (ret == -EAGAIN) {
-						ERROR(f->config->cdev,
-							"Function wakeup for %s could not complete due to suspend state.\n",
-							f->name ? f->name : "");
-					} else if (ret != -ENOTSUPP) {
-						ERROR(f->config->cdev,
-							"Failed to wake function %s from suspend state. ret=%d. Canceling USB request.\n",
-							f->name ? f->name : "",
-							ret);
-					}
-				}
-				f->func_wakeup_pending = 0;
-			}
-
-			/*
-			 * Call function resume irrespective of the speed.
-			 * Individual function needs to retain the USB3 Function
-			 * suspend state through out the Device suspend entry
-			 * and exit process.
-			 */
 			if (f->resume)
 				f->resume(f);
 		}
-
-		usb_gadget_vbus_draw(gadget, USB_VBUS_DRAW(gadget->speed));
+		maxpower = cdev->config->MaxPower;
+		if (maxpower > USB_SELF_POWER_VBUS_MAX_DRAW)
+			usb_gadget_clear_selfpowered(gadget);
+		usb_gadget_vbus_draw(gadget, maxpower ?
+			maxpower : CONFIG_USB_GADGET_VBUS_DRAW);
 	}
-
-	spin_unlock_irqrestore(&cdev->lock, flags);
 	cdev->suspended = 0;
 }
-
 /*-------------------------------------------------------------------------*/
 
 static const struct usb_gadget_driver composite_driver_template = {
