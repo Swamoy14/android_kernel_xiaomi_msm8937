@@ -143,7 +143,6 @@ do {									\
 	NEW_AUX_ENT(AT_SYSINFO_EHDR,					\
 		    (Elf64_Off)current->mm->context.vdso);		\
 } while (0)
-#define ARCH_DLINFO _SET_AUX_ENT_VDSO
 
 #define ARCH_HAS_SETUP_ADDITIONAL_PAGES
 struct linux_binprm;
