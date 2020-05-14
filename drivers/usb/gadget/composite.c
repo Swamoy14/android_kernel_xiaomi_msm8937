@@ -28,14 +28,6 @@
 #define SSUSB_GADGET_VBUS_DRAW_UNITS 8
 #define HSUSB_GADGET_VBUS_DRAW_UNITS 2
 
-/*
- * Based on enumerated USB speed, draw power with set_config and resume
- * HSUSB: 500mA, SSUSB: 900mA
- */
-#define USB_VBUS_DRAW(speed)\
-	(speed == USB_SPEED_SUPER ?\
-	SSUSB_GADGET_VBUS_DRAW : CONFIG_USB_GADGET_VBUS_DRAW)
-
 static bool enable_l1_for_hs;
 module_param(enable_l1_for_hs, bool, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(enable_l1_for_hs, "Enable support for L1 LPM for HS devices");
@@ -850,8 +842,13 @@ static int set_config(struct usb_composite_dev *cdev,
 					cdev->delayed_status);
 		}
 	}
-	/* when we return, be sure our power usage is valid */
-	power = c->MaxPower ? c->MaxPower : CONFIG_USB_GADGET_VBUS_DRAW;
+
+	/* Allow 900mA to draw with Super-Speed */
+	if (gadget->speed == USB_SPEED_SUPER)
+		power = SSUSB_GADGET_VBUS_DRAW;
+	else
+		power = CONFIG_USB_GADGET_VBUS_DRAW;
+
 done:
 	if (power <= USB_SELF_POWER_VBUS_MAX_DRAW)
 		usb_gadget_set_selfpowered(gadget);
@@ -2317,6 +2314,9 @@ composite_resume(struct usb_gadget *gadget)
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	struct usb_function		*f;
 	u16				maxpower;
+	int ret;
+	unsigned long			flags;
+
 	/* REVISIT:  should we have config level
 	 * suspend/resume callbacks?
 	 */
@@ -2328,6 +2328,7 @@ composite_resume(struct usb_gadget *gadget)
 			if (f->resume)
 				f->resume(f);
 		}
+
 		maxpower = cdev->config->MaxPower;
 		if (maxpower > USB_SELF_POWER_VBUS_MAX_DRAW)
 			usb_gadget_clear_selfpowered(gadget);
