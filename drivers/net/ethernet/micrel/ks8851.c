@@ -707,7 +707,7 @@ static void ks8851_rx_pkts3(struct ks8851_net *ks)
  * Read the interrupt status, work out what needs to be done and then clear
  * any of the interrupts that are not needed.
  */
-static irqreturn_t ks8851_irq(int irq, void *_ks)
+/*static irqreturn_t ks8851_irq(int irq, void *_ks)
 {
 	struct ks8851_net *ks = _ks;
 	unsigned status;
@@ -790,7 +790,7 @@ static irqreturn_t ks8851_irq(int irq, void *_ks)
 	if (status & IRQ_LCI)
 		mii_check_link(&ks->mii);
 	return IRQ_HANDLED;
-}
+}*/
 
 /**
  * calc_txlen - calculate size of message to send packet
