@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -152,6 +152,31 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		},
 		.ops = &msm_fe_Multimedia_dai_ops,
 		.name = "MultiMedia2",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
+			.stream_name = "CS-VOICE Playback",
+			.aif_name = "CS-VOICE_DL1",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.capture = {
+			.stream_name = "CS-VOICE Capture",
+			.aif_name = "CS-VOICE_UL1",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "CS-VOICE",
 		.probe = fe_dai_probe,
 	},
 	{
@@ -749,6 +774,31 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		},
 		.ops = &msm_fe_dai_ops,
 		.name = "VOICE_STUB",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
+			.stream_name = "VoLTE Playback",
+			.aif_name = "VoLTE_DL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.capture = {
+			.stream_name = "VoLTE Capture",
+			.aif_name = "VoLTE_UL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "VoLTE",
 		.probe = fe_dai_probe,
 	},
 	{
@@ -1995,6 +2045,58 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 	},
 	{
 		.playback = {
+			.stream_name = "Voice2 Playback",
+			.aif_name = "VOICE2_DL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.capture = {
+			.stream_name = "Voice2 Capture",
+			.aif_name = "VOICE2_UL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min =     8000,
+			.rate_max =     48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "Voice2",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
+			.stream_name = "Pseudo Playback",
+			.aif_name = "MM_DL9",
+			.rates = (SNDRV_PCM_RATE_8000_48000 |
+					SNDRV_PCM_RATE_KNOT),
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min =	8000,
+			.rate_max = 48000,
+		},
+		.capture = {
+			.stream_name = "Pseudo Capture",
+			.aif_name = "MM_UL9",
+			.rates = (SNDRV_PCM_RATE_8000_48000|
+					SNDRV_PCM_RATE_KNOT),
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 8,
+			.rate_min =     8000,
+			.rate_max =	48000,
+		},
+		.ops = &msm_fe_Multimedia_dai_ops,
+		.name = "Pseudo",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
 			.stream_name = "DTMF_RX_HOSTLESS Playback",
 			.aif_name = "DTMF_DL_HL",
 			.rates = SNDRV_PCM_RATE_8000_48000,
@@ -2092,10 +2194,7 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 			.aif_name = "MM_UL9",
 			.rates = (SNDRV_PCM_RATE_8000_48000|
 				  SNDRV_PCM_RATE_KNOT),
-			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
-				    SNDRV_PCM_FMTBIT_S24_LE |
-				    SNDRV_PCM_FMTBIT_S24_3LE |
-				    SNDRV_PCM_FMTBIT_S32_LE),
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 			.channels_min = 1,
 			.channels_max = 32,
 			.rate_min =     8000,
@@ -2264,6 +2363,31 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		},
 		.ops = &msm_fe_dai_ops,
 		.name = "LSM8",
+		.probe = fe_dai_probe,
+	},
+	{
+		.playback = {
+			.stream_name = "VoWLAN Playback",
+			.aif_name = "VoWLAN_DL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min = 8000,
+			.rate_max = 48000,
+		},
+		.capture = {
+			.stream_name = "VoWLAN Capture",
+			.aif_name = "VoWLAN_UL",
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+			.channels_min = 1,
+			.channels_max = 2,
+			.rate_min = 8000,
+			.rate_max = 48000,
+		},
+		.ops = &msm_fe_dai_ops,
+		.name = "VoWLAN",
 		.probe = fe_dai_probe,
 	},
 	/* FE DAIs created for multiple instances of offload playback */
@@ -2608,25 +2732,6 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 		.ops = &msm_fe_Multimedia_dai_ops,
 		.compress_new = snd_soc_new_compress,
 		.name = "MultiMedia29",
-		.probe = fe_dai_probe,
-	},
-	{
-		.playback = {
-			.stream_name = "MultiMedia30 Playback",
-			.aif_name = "MM_DL30",
-			.rates = (SNDRV_PCM_RATE_8000_384000|
-				  SNDRV_PCM_RATE_KNOT),
-		.formats = (SNDRV_PCM_FMTBIT_S16_LE |
-				    SNDRV_PCM_FMTBIT_S24_LE |
-				    SNDRV_PCM_FMTBIT_S24_3LE |
-				    SNDRV_PCM_FMTBIT_S32_LE),
-			.channels_min = 1,
-			.channels_max = 32,
-			.rate_min = 8000,
-			.rate_max = 384000,
-		},
-		.ops = &msm_fe_Multimedia_dai_ops,
-		.name = "MultiMedia30",
 		.probe = fe_dai_probe,
 	},
 };
