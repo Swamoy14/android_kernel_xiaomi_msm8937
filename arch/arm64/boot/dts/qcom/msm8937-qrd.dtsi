@@ -168,3 +168,7 @@
 		status = "disabled";
 	};
 };
+
+&thermal_zones {
+    /delete-node/ pa-therm1-adc;
+};
