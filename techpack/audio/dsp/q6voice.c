@@ -29,10 +29,6 @@
 #include <ipc/apr_tal.h>
 #include "adsp_err.h"
 
-#ifdef CONFIG_WAKE_GESTURES
-#include <linux/wake_gestures.h>
-#endif
-
 #define TIMEOUT_MS 300
 
 
@@ -1928,8 +1924,7 @@ int voc_enable_dtmf_rx_detection(uint32_t session_id, uint32_t enable)
 		return -EINVAL;
 	}
 
-	
-        mutex_lock(&v->lock);
+	mutex_lock(&v->lock);
 	v->dtmf_rx_detect_en = enable;
 
 	if (is_voc_state_active(v->voc_state))
@@ -6921,11 +6916,6 @@ int voc_end_voice_call(uint32_t session_id)
 		return -EINVAL;
 	}
 
-#ifdef CONFIG_WAKE_GESTURES
-	is_incall = false;
-	pr_info("wake_gestures: not in call: call ended.\n");
-#endif
-
 	mutex_lock(&v->lock);
 
 	if (v->voc_state == VOC_RUN || v->voc_state == VOC_ERROR ||
@@ -6978,11 +6968,6 @@ int voc_standby_voice_call(uint32_t session_id)
 		return -EINVAL;
 	}
 	pr_debug("%s: voc state=%d", __func__, v->voc_state);
-
-#ifdef CONFIG_WAKE_GESTURES
-	is_incall = true;
-	pr_info("wake_gestures: in call: standby.\n");
-#endif
 
 	if (v->voc_state == VOC_RUN) {
 		apr_mvm = common.apr_q6_mvm;
@@ -7220,11 +7205,6 @@ int voc_resume_voice_call(uint32_t session_id)
 	struct voice_data *v = voice_get_session(session_id);
 	int ret = 0;
 
-#ifdef CONFIG_WAKE_GESTURES
-	is_incall = true;
-	pr_info("wake_gestures: in call: resume.\n");
-#endif
-
 	ret = voice_send_start_voice_cmd(v);
 	if (ret < 0) {
 		pr_err("Fail in sending START_VOICE\n");
@@ -7255,11 +7235,6 @@ int voc_start_voice_call(uint32_t session_id)
 
 		return -EINVAL;
 	}
-
-#ifdef CONFIG_WAKE_GESTURES
-	is_incall = true;
-	pr_info("wake_gestures: in call: call started.\n");
-#endif
 
 	mutex_lock(&v->lock);
 
