@@ -75,4 +75,18 @@
 	};
 };
 
+&sdhc_1 {
+	//vmmc-supply = <&pm8937_l8>;
+	//vqmmc-supply = <&pm8937_l5>;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	status = "ok";
+};
+
+&sdhc_2 {
+	//vmmc-supply = <&pm8937_l11>;
+	//vqmmc-supply = <&pm8937_l12>;
+	status = "ok";
+}; 
+
 #include "land/msm8937-land.dtsi"
