@@ -1446,9 +1446,6 @@ config TOUCHSCREEN_IST30XX
 
 source "drivers/input/touchscreen/IST30xx/Kconfig"
 
-config WAKE_GESTURES
-	bool "wake gestures"
-
 config TOUCHSCREEN_RAYDIUM_CHIPSET
 	bool "Raydium WT030 touchpanel CHIPSET"
 	depends on I2C
@@ -1456,5 +1453,8 @@ config TOUCHSCREEN_RAYDIUM_CHIPSET
 	  Say Y here if you have a Raydium WT030 CHIPSET touchscreen.
 
 	  If unsure, say N.
+
+config WAKE_GESTURES
+	bool "wake gestures"
 
 endif

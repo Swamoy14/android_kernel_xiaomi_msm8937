@@ -408,7 +408,7 @@ static irqreturn_t gf_irq(int irq, void *handle)
 	char temp = GF_NET_EVENT_IRQ;
 	gf_dbg("enter irq %s\n", __func__);
 
-	__pm_wakeup_event(&gf_dev->ttw_wl, 1000);
+	__pm_wakeup_event(&gf_dev->ttw_ws, 1000);
 
 	sendnlmsg(&temp);
 #elif defined (GF_FASYNC)
@@ -710,8 +710,7 @@ static int gf_probe(struct platform_device *pdev)
 		fb_register_client(&gf_dev->notifier);
 		gf_reg_key_kernel(gf_dev);
 
-		wakeup_source_init(&gf_dev->ttw_wl, "goodix_ttw_wl");
-
+		wakeup_source_init(&gf_dev->ttw_ws, "goodix_ttw_ws");
 
 	}
 
@@ -770,7 +769,7 @@ static int gf_remove(struct platform_device *pdev)
 
 	mutex_unlock(&device_list_lock);
 
-	wakeup_source_trash(&gf_dev->ttw_wl);
+	wakeup_source_trash(&gf_dev->ttw_ws);
 
 	FUNC_EXIT();
 	return 0;

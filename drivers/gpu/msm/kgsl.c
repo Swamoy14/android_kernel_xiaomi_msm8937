@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2487,7 +2487,7 @@ long kgsl_ioctl_gpuobj_import(struct kgsl_device_private *dev_priv,
 	return 0;
 
 unmap:
-	if (param->type == KGSL_USER_MEM_TYPE_DMABUF) {
+	if (kgsl_memdesc_usermem_type(&entry->memdesc) == KGSL_MEM_ENTRY_ION) {
 		kgsl_destroy_ion(entry->priv_data);
 		entry->memdesc.sgt = NULL;
 	}
@@ -2793,7 +2793,7 @@ long kgsl_ioctl_map_user_mem(struct kgsl_device_private *dev_priv,
 	return result;
 
 error_attach:
-	switch (memtype) {
+	switch (kgsl_memdesc_usermem_type(&entry->memdesc)) {
 	case KGSL_MEM_ENTRY_ION:
 		kgsl_destroy_ion(entry->priv_data);
 		entry->memdesc.sgt = NULL;
@@ -4139,6 +4139,8 @@ kgsl_mmap_memstore(struct kgsl_device *device, struct vm_area_struct *vma)
 	if (vma->vm_flags & VM_WRITE)
 		return -EPERM;
 
+	vma->vm_flags &= ~VM_MAYWRITE;
+
 	if (memdesc->size  !=  vma_size) {
 		KGSL_MEM_ERR(device, "memstore bad size: %d should be %llu\n",
 			     vma_size, memdesc->size);
@@ -4614,6 +4616,8 @@ struct kgsl_driver kgsl_driver  = {
 	.stats.secure_max = ATOMIC_LONG_INIT(0),
 	.stats.mapped = ATOMIC_LONG_INIT(0),
 	.stats.mapped_max = ATOMIC_LONG_INIT(0),
+	.stats.page_free_pending = ATOMIC_LONG_INIT(0),
+	.stats.page_alloc_pending = ATOMIC_LONG_INIT(0),
 };
 EXPORT_SYMBOL(kgsl_driver);
 
@@ -4679,7 +4683,6 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 {
 	int status = -EINVAL;
 	struct resource *res;
-	int cpu;
 
 	status = _register_device(device);
 	if (status)
@@ -4807,12 +4810,8 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 
 		device->pwrctrl.l2pc_cpus_qos.type =
 				PM_QOS_REQ_AFFINE_CORES;
-		cpumask_empty(&device->pwrctrl.l2pc_cpus_qos.cpus_affine);
-		for_each_possible_cpu(cpu) {
-			if ((1 << cpu) & device->pwrctrl.l2pc_cpus_mask)
-				cpumask_set_cpu(cpu, &device->pwrctrl.
-						l2pc_cpus_qos.cpus_affine);
-		}
+		atomic_set(&device->pwrctrl.l2pc_cpus_qos.cpus_affine,
+			   device->pwrctrl.l2pc_cpus_mask);
 
 		pm_qos_add_request(&device->pwrctrl.l2pc_cpus_qos,
 				PM_QOS_CPU_DMA_LATENCY,

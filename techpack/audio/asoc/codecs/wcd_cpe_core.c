@@ -1978,8 +1978,8 @@ struct wcd_cpe_core *wcd_cpe_init(const char *img_fname,
 	}
 
 	card = codec->component.card->snd_card;
-	snprintf(proc_name, (sizeof("cpe") + sizeof("_state") +
-		 sizeof(id) - 2), "%s%d%s", cpe_name, id, state_name);
+	snprintf(proc_name, sizeof(proc_name), "%s%d%s", cpe_name, id,
+	        state_name);
 	entry = snd_info_create_card_entry(card, proc_name,
 					   card->proc_root);
 	if (entry) {
@@ -3554,8 +3554,7 @@ static int wcd_cpe_lsm_lab_control(
 	pr_debug("%s: enter payload_size = %d Enable %d\n",
 		 __func__, pld_size, enable);
 
-	memset(&cpe_lab_enable, 0, sizeof(cpe_lab_enable));
-
+	memset(&cpe_lab_enable.hdr, 0, sizeof(cpe_lab_enable.hdr));
 	if (fill_lsm_cmd_header_v0_inband(&cpe_lab_enable.hdr, session->id,
 		(u8) pld_size, CPE_LSM_SESSION_CMD_SET_PARAMS_V2)) {
 		return -EINVAL;
@@ -3605,7 +3604,8 @@ static int wcd_cpe_lsm_eob(
 	int ret = 0;
 	struct cmi_hdr lab_eob;
 
-	if (fill_lsm_cmd_header_v0_inband(&lab_eob, session->id,
+	memset(&lab_eob, 0, sizeof(lab_eob));
+        if (fill_lsm_cmd_header_v0_inband(&lab_eob, session->id,
 		0, CPE_LSM_SESSION_CMD_EOB)) {
 		return -EINVAL;
 	}

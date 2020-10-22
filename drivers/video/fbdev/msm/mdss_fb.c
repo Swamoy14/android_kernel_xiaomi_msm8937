@@ -278,20 +278,23 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 
 static int lcd_backlight_registered;
 
-#define LINEAR_CONVERT(v_old, min_new, max_new, min_old, max_old) \
-				((((v_old - min_old) * (max_new - min_new)) / (max_old - min_old)) + min_new)
-
 #define MDSS_BRIGHT_TO_BL1(out, v, bl_min, bl_max, min_bright, max_bright) do {\
-				if (v <= min_bright) out = bl_min; \
-				else \
-				out = LINEAR_CONVERT(v, bl_min, bl_max, min_bright, max_bright); \
-				} while (0)
+					if (v <= ((int)min_bright*(int)bl_max-(int)bl_min*(int)max_bright)\
+						/((int)bl_max - (int)bl_min)) out = 1; \
+					else \
+					out = (((int)bl_max - (int)bl_min)*v + \
+					((int)max_bright*(int)bl_min - (int)min_bright*(int)bl_max)) \
+					/((int)max_bright - (int)min_bright); \
+					} while (0)
 
 static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 				      enum led_brightness value)
 {
 	struct msm_fb_data_type *mfd = dev_get_drvdata(led_cdev->dev->parent);
-	int bl_lvl;
+	u64 bl_lvl;
+	int brightness_min;
+
+	brightness_min = 1;
 
 	if (mfd->boot_notification_led) {
 		led_trigger_event(mfd->boot_notification_led, 0);
@@ -304,11 +307,11 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	/* This maps android backlight level 0 to 255 into
 	 * driver backlight level 0 to bl_max with rounding
 	 */
-#if 1
-	if (mfd->panel_info->bl_min < 5)
+	#if 1
+	if (mfd->panel_info->bl_min == 1)
 		mfd->panel_info->bl_min = 5;
 	MDSS_BRIGHT_TO_BL1(bl_lvl, value, mfd->panel_info->bl_min, mfd->panel_info->bl_max,
-			1, mfd->panel_info->brightness_max);
+			brightness_min, mfd->panel_info->brightness_max);
 
 	if (bl_lvl && !value)
 		bl_lvl = 0;
@@ -1317,6 +1320,7 @@ static int mdss_fb_probe(struct platform_device *pdev)
 
 	if (mfd->panel.type == SPI_PANEL)
 		mfd->fb_imgType = MDP_RGB_565;
+
 	if (mfd->panel.type == MIPI_VIDEO_PANEL || mfd->panel.type ==
 		MIPI_CMD_PANEL || mfd->panel.type == SPI_PANEL){
 		rc = of_property_read_string(pdev->dev.of_node,
@@ -1330,6 +1334,7 @@ static int mdss_fb_probe(struct platform_device *pdev)
 				mfd->fb_imgType = MDP_RGBA_8888;
 			}
 		}
+
 	mfd->split_fb_left = mfd->split_fb_right = 0;
 
 	mdss_fb_set_split_mode(mfd, pdata);
@@ -2237,8 +2242,9 @@ void mdss_fb_free_fb_ion_memory(struct msm_fb_data_type *mfd)
 
 	ion_unmap_kernel(mfd->fb_ion_client, mfd->fb_ion_handle);
 
-	if (mfd->mdp.fb_mem_get_iommu_domain && !(!mfd->fb_attachment ||
-		!mfd->fb_attachment->dmabuf ||
+	if ((mfd->mdp.fb_mem_get_iommu_domain ||
+		(mfd->panel.type == SPI_PANEL)) &&
+		!(!mfd->fb_attachment || !mfd->fb_attachment->dmabuf ||
 		!mfd->fb_attachment->dmabuf->ops)) {
 		dma_buf_unmap_attachment(mfd->fb_attachment, mfd->fb_table,
 				DMA_BIDIRECTIONAL);
@@ -2298,6 +2304,20 @@ int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd, size_t fb_size)
 
 		mfd->fb_table = dma_buf_map_attachment(mfd->fb_attachment,
 				DMA_BIDIRECTIONAL);
+		if (IS_ERR(mfd->fb_table)) {
+			rc = PTR_ERR(mfd->fb_table);
+			goto err_detach;
+		}
+	} else if (mfd->panel.type == SPI_PANEL) {
+		mfd->fb_attachment = dma_buf_attach(mfd->fbmem_buf,
+				&mfd->pdev->dev);
+		if (IS_ERR(mfd->fb_attachment)) {
+			rc = PTR_ERR(mfd->fb_attachment);
+			goto err_put;
+		}
+
+		mfd->fb_table = dma_buf_map_attachment(mfd->fb_attachment,
+			DMA_BIDIRECTIONAL);
 		if (IS_ERR(mfd->fb_table)) {
 			rc = PTR_ERR(mfd->fb_table);
 			goto err_detach;
@@ -3050,9 +3070,9 @@ static int __mdss_fb_wait_for_fence_sub(struct msm_sync_pt_data *sync_pt_data,
 			wait_ms = jiffies_to_msecs(wait_jf);
 			if (wait_jf < 0)
 				break;
-
-			wait_ms = min_t(long, WAIT_FENCE_FINAL_TIMEOUT,
-					wait_ms);
+			else
+				wait_ms = min_t(long, WAIT_FENCE_FINAL_TIMEOUT,
+						wait_ms);
 
 			pr_warn("%s: sync_fence_wait timed out! ",
 					mdss_get_sync_fence_name(fences[i]));

@@ -138,7 +138,7 @@ const_debug unsigned int sysctl_sched_features =
  * Number of tasks to iterate in a single balance run.
  * Limited because this is done with IRQs disabled.
  */
-const_debug unsigned int sysctl_sched_nr_migrate = NR_CPUS;
+const_debug unsigned int sysctl_sched_nr_migrate = 32;
 
 /*
  * period over which we average the RT time consumption, measured
@@ -3579,7 +3579,7 @@ static void __sched notrace __schedule(bool preempt)
 		hrtick_clear(rq);
 
 	local_irq_disable();
-	rcu_note_context_switch();
+	rcu_note_context_switch(preempt);
 
 	/*
 	 * Make sure that signal_pending_state()->signal_pending() below
@@ -8058,15 +8058,12 @@ int sched_cpu_deactivate(unsigned int cpu)
 	 * users of this state to go away such that all new such users will
 	 * observe it.
 	 *
-	 * For CONFIG_PREEMPT we have preemptible RCU and its sync_rcu() might
-	 * not imply sync_sched(), so wait for both.
-	 *
 	 * Do sync before park smpboot threads to take care the rcu boost case.
 	 */
 	if (IS_ENABLED(CONFIG_PREEMPT))
-		synchronize_rcu_mult(call_rcu, call_rcu_sched);
-	else
-		synchronize_rcu();
+		synchronize_sched();
+
+	synchronize_rcu_mult(call_rcu, call_rcu_sched);
 
 #ifdef CONFIG_SCHED_SMT
 	/*

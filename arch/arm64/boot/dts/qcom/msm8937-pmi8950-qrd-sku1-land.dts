@@ -65,6 +65,10 @@
 	qcom,hold-soc-while-full;
 };
 
+&thermal_zones {
+	/delete-node/ pa-therm1-adc;
+};
+
 &int_codec {
 	qcom,model = "msm8952-sku1-snd-card";
 };

@@ -12,6 +12,7 @@
  */
 
 #include "msm8937-pinctrl.dtsi"
+#include "msm8937-camera-sensor-qrd.dtsi"
 
 &soc {
 	gpio_keys {
@@ -60,6 +61,15 @@
 		"AMIC1", "MIC BIAS External",
 		"AMIC2", "MIC BIAS Internal2",
 		"AMIC3", "MIC BIAS External";
+};
+
+
+&msm_digital_codec {
+	status = "okay";
+};
+
+&pmic_analog_codec {
+	status = "okay";
 };
 
 &blsp1_uart2 {
@@ -161,14 +171,4 @@
 
 &pm8937_vadc {
 	/delete-node/ chan@11;
-};
-
-&thermal_zones {
-	quiet-therm-step {
-		status = "disabled";
-	};
-};
-
-&thermal_zones {
-    /delete-node/ pa-therm1-adc;
 };

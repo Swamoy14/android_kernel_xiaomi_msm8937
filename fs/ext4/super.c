@@ -969,7 +969,7 @@ static int ext4_drop_inode(struct inode *inode)
 {
 	int drop = generic_drop_inode(inode);
 
-	trace_ext4_drop_inode(inode, drop);
+	//trace_ext4_drop_inode(inode, drop);
 	return drop;
 }
 
@@ -1085,7 +1085,7 @@ static int ext4_nfs_commit_metadata(struct inode *inode)
 		.sync_mode = WB_SYNC_ALL
 	};
 
-	trace_ext4_nfs_commit_metadata(inode);
+	//trace_ext4_nfs_commit_metadata(inode);
 	return ext4_write_inode(inode, &wbc);
 }
 
@@ -4015,11 +4015,9 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
 		goto failed_mount2;
 	}
 
-	get_random_bytes(&sbi->s_next_generation, sizeof(u32));
-	spin_lock_init(&sbi->s_next_gen_lock);
+	sbi->s_gdb_count = db_count;
 
-	setup_timer(&sbi->s_err_report, print_daily_error_info,
-		(unsigned long) sb);
+	setup_timer(&sbi->s_err_report, print_daily_error_info, 0);
 
 	/* Register extent status tree shrinker */
 	if (ext4_es_register_shrinker(sbi))
@@ -4838,7 +4836,7 @@ static int ext4_sync_fs(struct super_block *sb, int wait)
 	bool needs_barrier = false;
 	struct ext4_sb_info *sbi = EXT4_SB(sb);
 
-	trace_ext4_sync_fs(sb, wait);
+	//trace_ext4_sync_fs(sb, wait);
 	flush_workqueue(sbi->rsv_conversion_wq);
 	/*
 	 * Writeback quota in non-journalled quota case - journalled quota has

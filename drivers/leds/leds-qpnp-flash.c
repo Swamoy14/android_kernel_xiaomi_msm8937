@@ -251,7 +251,7 @@ struct qpnp_flash_led {
 	struct workqueue_struct		*ordered_workq;
 	struct qpnp_vadc_chip		*vadc_dev;
 	struct mutex			flash_led_lock;
-	struct wakeup_source flashlight_led_lock;
+	struct wakeup_source 	flashlight_led_lock;
 	struct dentry			*dbgfs_root;
 	int				num_leds;
 	u16				base;

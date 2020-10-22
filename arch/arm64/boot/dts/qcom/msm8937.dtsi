@@ -24,7 +24,7 @@
 	interrupt-parent = <&wakegic>;
 
 	chosen {
-		bootargs = "sched_enable_hmp=1 kpti=0";
+		bootargs = "kpti=0";
 	};
 
 	firmware: firmware {
@@ -124,16 +124,6 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0x400000>;
-		};
-
-		ramoops@9ff00000 {
-			compatible = "ramoops";
-			reg = <0x0 0x9ff00000 0x0 0x00300000>;
-			record-size = <0x1000>;
-			console-size = <0x200000>;
-			ftrace-size = <0x1000>;
-			pmsg-size = <0x200000>;
-			ecc-size = <0>;
 		};
 	};
 

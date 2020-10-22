@@ -2044,6 +2044,9 @@ static int __init console_setup(char *str)
 	char *s, *options, *brl_options = NULL;
 	int idx;
 
+	if (str[0] == 0)
+		return 1;
+
 	if (_braille_console_setup(&str, &brl_options))
 		return 1;
 
@@ -2135,15 +2138,7 @@ void resume_console(void)
 	console_unlock();
 }
 
-void emergency_unlock_console(void)
-{
-	console_suspended = 0;
-}
-EXPORT_SYMBOL(emergency_unlock_console);
-
 #ifdef CONFIG_CONSOLE_FLUSH_ON_HOTPLUG
-
-
 
 /**
  * console_cpu_notify - print deferred console messages after CPU hotplug

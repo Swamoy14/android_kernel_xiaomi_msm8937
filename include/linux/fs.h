@@ -1506,8 +1506,40 @@ static inline void i_gid_write(struct inode *inode, gid_t gid)
 	inode->i_gid = make_kgid(inode->i_sb->s_user_ns, gid);
 }
 
-extern struct timespec current_fs_time(struct super_block *sb);
-extern struct timespec current_time(struct inode *inode);
+/**
+ * current_fs_time - Return FS time
+ * @sb: Superblock.
+ *
+ * Return the current time truncated to the time granularity supported by
+ * the fs.
+ */
+static inline struct timespec current_fs_time(struct super_block *sb)
+{
+	struct timespec now = current_kernel_time();
+	return timespec_trunc(now, sb->s_time_gran);
+}
+
+/**
+ * current_time - Return FS time
+ * @inode: inode.
+ *
+ * Return the current time truncated to the time granularity supported by
+ * the fs.
+ *
+ * Note that inode and inode->sb cannot be NULL.
+ * Otherwise, the function warns and returns time without truncation.
+ */
+static inline struct timespec current_time(struct inode *inode)
+{
+	struct timespec now = current_kernel_time();
+
+	if (unlikely(!inode->i_sb)) {
+		WARN(1, "current_time() called with uninitialized super_block in the inode");
+		return now;
+	}
+
+	return timespec_trunc(now, inode->i_sb->s_time_gran);
+}
 
 /*
  * Snapshotting support.
@@ -3295,16 +3327,5 @@ extern void inode_nohighmem(struct inode *inode);
 
 int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
 			     unsigned int flags);
-
-/*
- * Flush file data before changing attributes.  Caller must hold any locks
- * required to prevent further writes to this file until we're done setting
- * flags.
- */
-static inline int inode_drain_writes(struct inode *inode)
-{
-	inode_dio_wait(inode);
-	return filemap_write_and_wait(inode->i_mapping);
-}
 
 #endif /* _LINUX_FS_H */

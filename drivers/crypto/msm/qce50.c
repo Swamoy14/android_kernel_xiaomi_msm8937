@@ -850,6 +850,11 @@ static int _ce_setup_cipher(struct qce_device *pce_dev, struct qce_req *creq,
 	switch (creq->alg) {
 	case CIPHER_ALG_DES:
 		if (creq->mode !=  QCE_MODE_ECB) {
+			if (ivsize > MAX_IV_LENGTH) {
+				pr_err("%s: error: Invalid length parameter\n",
+					 __func__);
+				return -EINVAL;
+			}
 			_byte_stream_to_net_words(enciv32, creq->iv, ivsize);
 			pce = cmdlistinfo->encr_cntr_iv;
 			pce->data = enciv32[0];
@@ -5980,6 +5985,13 @@ static int qce_smmu_init(struct qce_device *pce_dev)
 				DOMAIN_ATTR_ATOMIC, &attr);
 	if (ret < 0) {
 		pr_err("Set ATOMIC attr failed, err = %d\n", ret);
+		goto ext_fail_set_attr;
+	}
+
+	ret = iommu_domain_set_attr(mapping->domain,
+				DOMAIN_ATTR_UPSTREAM_IOVA_ALLOCATOR, &attr);
+	if (ret < 0) {
+		pr_err("Set UPSTREAM_IOVA_ALLOCATOR failed, err = %d\n", ret);
 		goto ext_fail_set_attr;
 	}
 

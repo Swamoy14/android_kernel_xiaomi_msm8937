@@ -1537,7 +1537,7 @@ retry:
 			atomic_inc(&inode->i_count);
 			inode->i_state &= ~I_DIRTY_TIME;
 			spin_unlock(&inode->i_lock);
-			trace_writeback_lazytime_iput(inode);
+			//trace_writeback_lazytime_iput(inode);
 			mark_inode_dirty_sync(inode);
 			goto retry;
 		}
@@ -2112,29 +2112,6 @@ void inode_nohighmem(struct inode *inode)
 	mapping_set_gfp_mask(inode->i_mapping, GFP_USER);
 }
 EXPORT_SYMBOL(inode_nohighmem);
-
-/**
- * current_time - Return FS time
- * @inode: inode.
- *
- * Return the current time truncated to the time granularity supported by
- * the fs.
- *
- * Note that inode and inode->sb cannot be NULL.
- * Otherwise, the function warns and returns time without truncation.
- */
-struct timespec current_time(struct inode *inode)
-{
-	struct timespec now = current_kernel_time();
-
-	if (unlikely(!inode->i_sb)) {
-		WARN(1, "current_time() called with uninitialized super_block in the inode");
-		return now;
-	}
-
-	return timespec_trunc(now, inode->i_sb->s_time_gran);
-}
-EXPORT_SYMBOL(current_time);
 
 /*
  * Generic function to check FS_IOC_SETFLAGS values and reject any invalid

@@ -100,7 +100,7 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 
 	J_ASSERT(ext4_journal_current_handle() == NULL);
 
-	trace_ext4_sync_file_enter(file, datasync);
+	//trace_ext4_sync_file_enter(file, datasync);
 
 	if (inode->i_sb->s_flags & MS_RDONLY) {
 		/* Make sure that we read updated s_mount_flags value */
@@ -148,11 +148,15 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 	ret = jbd2_complete_transaction(journal, commit_tid);
 	if (needs_barrier) {
 	issue_flush:
-		err = blkdev_issue_flush(inode->i_sb->s_bdev, GFP_KERNEL, NULL);
+		err = 0;
+		if (!blk_queue_nonrot(bdev_get_queue(inode->i_sb->s_bdev)))
+			err = blkdev_issue_flush(inode->i_sb->s_bdev, GFP_KERNEL, NULL);
+		else
+			blkdev_issue_flush_nowait(inode->i_sb->s_bdev, GFP_KERNEL);
 		if (!ret)
 			ret = err;
 	}
 out:
-	trace_ext4_sync_file_exit(inode, ret);
+	//trace_ext4_sync_file_exit(inode, ret);
 	return ret;
 }
