@@ -38,6 +38,8 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/lmh.h>
+#undef CREATE_TRACE_POINTS
+#include <trace/events/power.h>
 
 #define LIMITS_DCVSH                0x10
 #define LIMITS_PROFILE_CHANGE       0x01
@@ -178,9 +180,15 @@ static unsigned long limits_mitigation_notify(struct limits_dcvs_hw *hw)
 	pr_debug("CPU:%d max limit:%lu\n", cpumask_first(&hw->core_map),
 			max_limit);
 	trace_lmh_dcvs_freq(cpumask_first(&hw->core_map), max_limit);
+	trace_clock_set_rate(hw->sensor_name,
+			max_limit,
+			cpumask_first(&hw->core_map));
 
 notify_exit:
 	hw->hw_freq_limit = max_limit;
+	get_online_cpus();
+	cpufreq_update_policy(cpumask_first(&hw->core_map));
+	put_online_cpus();
 	return max_limit;
 }
 
@@ -662,6 +670,7 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 	hw->lmh_freq_attr.attr.name = "lmh_freq_limit";
 	hw->lmh_freq_attr.show = lmh_freq_limit_show;
 	hw->lmh_freq_attr.attr.mode = 0444;
+	sysfs_attr_init(&hw->lmh_freq_attr.attr);
 	device_create_file(&pdev->dev, &hw->lmh_freq_attr);
 
 probe_exit:
