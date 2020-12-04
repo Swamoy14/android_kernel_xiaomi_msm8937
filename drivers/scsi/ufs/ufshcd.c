@@ -364,43 +364,6 @@ ufs_get_pm_lvl_to_link_pwr_state(enum ufs_pm_level lvl)
 	return ufs_pm_lvl_states[lvl].link_state;
 }
 
-<<<<<<< HEAD
-static inline void ufshcd_set_card_online(struct ufs_hba *hba)
-{
-	atomic_set(&hba->card_state, UFS_CARD_STATE_ONLINE);
-}
-
-static inline void ufshcd_set_card_offline(struct ufs_hba *hba)
-{
-	atomic_set(&hba->card_state, UFS_CARD_STATE_OFFLINE);
-}
-
-static inline bool ufshcd_is_card_online(struct ufs_hba *hba)
-{
-	return (atomic_read(&hba->card_state) == UFS_CARD_STATE_ONLINE);
-}
-
-static inline bool ufshcd_is_card_offline(struct ufs_hba *hba)
-{
-	return (atomic_read(&hba->card_state) == UFS_CARD_STATE_OFFLINE);
-}
-
-static inline enum ufs_pm_level
-ufs_get_desired_pm_lvl_for_dev_link_state(enum ufs_dev_pwr_mode dev_state,
-					enum uic_link_state link_state)
-{
-	enum ufs_pm_level lvl;
-
-	for (lvl = UFS_PM_LVL_0; lvl < UFS_PM_LVL_MAX; lvl++) {
-		if ((ufs_pm_lvl_states[lvl].dev_state == dev_state) &&
-			(ufs_pm_lvl_states[lvl].link_state == link_state))
-			return lvl;
-	}
-
-	/* if no match found, return the level 0 */
-	return UFS_PM_LVL_0;
-}
-=======
 static struct ufs_dev_fix ufs_fixups[] = {
 	/* UFS cards deviations table */
 	UFS_FIX(UFS_VENDOR_MICRON, UFS_ANY_MODEL,
@@ -426,7 +389,6 @@ static struct ufs_dev_fix ufs_fixups[] = {
 
 	END_FIX
 };
->>>>>>> 0e53dcf91d7b26e5a3a6755a088005c343d6568f
 
 static inline bool ufshcd_is_valid_pm_lvl(int lvl)
 {
@@ -2044,10 +2006,6 @@ static int ufshcd_hibern8_hold(struct ufs_hba *hba, bool async)
 	}
 
 start:
-<<<<<<< HEAD
-	switch (hba->hibern8_on_idle.state) {
-	case HIBERN8_EXITED:
-=======
 	switch (hba->clk_gating.state) {
 	case CLKS_ON:
 		/*
@@ -2072,7 +2030,6 @@ start:
 			spin_lock_irqsave(hba->host->host_lock, flags);
 			goto start;
 		}
->>>>>>> 0e53dcf91d7b26e5a3a6755a088005c343d6568f
 		break;
 	case REQ_HIBERN8_ENTER:
 		if (cancel_delayed_work(&hba->hibern8_on_idle.enter_work)) {
@@ -10034,24 +9991,7 @@ int ufshcd_shutdown(struct ufs_hba *hba)
 		goto out;
 
 	pm_runtime_get_sync(hba->dev);
-	ufshcd_hold_all(hba);
-	ufshcd_mark_shutdown_ongoing(hba);
-	ufshcd_shutdown_clkscaling(hba);
-	/**
-	 * (1) Acquire the lock to stop any more requests
-	 * (2) Wait for all issued requests to complete
-	 */
-	ufshcd_get_write_lock(hba);
-	ufshcd_scsi_block_requests(hba);
-	ret = ufshcd_wait_for_doorbell_clr(hba, U64_MAX);
-	if (ret)
-		dev_err(hba->dev, "%s: waiting for DB clear: failed: %d\n",
-			__func__, ret);
-	/* Requests may have errored out above, let it be handled */
-	flush_work(&hba->eh_work);
-	/* reqs issued from contexts other than shutdown will fail from now */
-	ufshcd_scsi_unblock_requests(hba);
-	ufshcd_release_all(hba);
+
 	ret = ufshcd_suspend(hba, UFS_SHUTDOWN_PM);
 out:
 	if (ret)
