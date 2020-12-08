@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1022,6 +1022,36 @@ void sme_set_olpc_mode(tpAniSirGlobal pMac, bool enable)
     }
 }
 
+#ifdef FEATURE_WLAN_SW_PTA
+/**
+ * sme_process_sw_pta_req() - Process sw pta request
+ * @mac - context handler
+ * @sme_cmd: cmd param containing sw pta request
+ *
+ * The function sends sw pta request to firmware
+ */
+static void sme_process_sw_pta_req(tpAniSirGlobal mac, tSmeCmd *sme_cmd)
+{
+	tSirRetStatus ret = eSIR_SUCCESS;
+	tSirMsgQ msg;
+
+	msg.type = WDA_SW_PTA_REQ;
+	msg.reserved = 0;
+	msg.bodyptr = sme_cmd->u.sw_pta_req;
+	msg.bodyval = 0;
+
+	ret = wdaPostCtrlMsg(mac, &msg);
+	if (ret != eSIR_SUCCESS) {
+		smsLog(mac, LOGE,
+		       FL("Posting WDA_SW_PTA_REQ to WDA failed, reason=%X"),
+		       ret);
+		vos_mem_free(sme_cmd->u.sw_pta_req);
+	} else {
+		smsLog(mac, LOG1, FL("posted WDA_SW_PTA_REQ command"));
+	}
+}
+#endif /* FEATURE_WLAN_SW_PTA */
+
 tANI_BOOLEAN smeProcessCommand( tpAniSirGlobal pMac )
 {
     tANI_BOOLEAN fContinue = eANI_BOOLEAN_FALSE;
@@ -1499,7 +1529,19 @@ sme_process_cmd:
                                       "sme_command_olpc_mode processed");
                             fContinue = eANI_BOOLEAN_TRUE;
                             break;
-
+#ifdef FEATURE_WLAN_SW_PTA
+                        case eSmeCommandSwPTAReq:
+                            csrLLUnlock(&pMac->sme.smeCmdActiveList);
+                            sme_process_sw_pta_req(pMac, pCommand);
+                            if (csrLLRemoveEntry(&pMac->sme.smeCmdActiveList,
+                                &pCommand->Link, LL_ACCESS_LOCK)) {
+                                csrReleaseCommand(pMac, pCommand);
+                            }
+                            VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_INFO,
+                                      "eSmeCommandScoIndReq processed");
+                            fContinue = eANI_BOOLEAN_TRUE;
+                            break;
+#endif /* FEATURE_WLAN_SW_PTA */
                         default:
                             //something is wrong
                             //remove it from the active list
@@ -1716,7 +1758,7 @@ eHalStatus sme_Open(tHalHandle hHal)
 eHalStatus sme_set11dinfo(tHalHandle hHal,  tpSmeConfigParams pSmeConfigParams)
 {
    eHalStatus status = eHAL_STATUS_FAILURE;
-   tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
+   tpAniSirGlobal __maybe_unused pMac = PMAC_STRUCT( hHal );
 
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
                       TRACE_CODE_SME_RX_HDD_MSG_SET_11DINFO, NO_SESSION, 0));
@@ -1771,7 +1813,7 @@ eHalStatus sme_getSoftApDomain(tHalHandle hHal,  v_REGDOMAIN_t *domainIdSoftAp)
 eHalStatus sme_setRegInfo(tHalHandle hHal,  tANI_U8 *apCntryCode)
 {
    eHalStatus status = eHAL_STATUS_FAILURE;
-   tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
+   tpAniSirGlobal __maybe_unused pMac = PMAC_STRUCT( hHal );
 
    MTRACE(vos_trace(VOS_MODULE_ID_SME,
              TRACE_CODE_SME_RX_HDD_MSG_SET_REGINFO, NO_SESSION, 0));
@@ -3184,6 +3226,20 @@ eHalStatus sme_ProcessMsg(tHalHandle hHal, vos_msg_t* pMsg)
                          FL("Empty message for (eWNI_SME_ECSA_IE_BEACON_COMP_IND)"));
               }
               break;
+#ifdef FEATURE_WLAN_SW_PTA
+          case eWNI_SME_SW_PTA_RESP:
+                MTRACE(vos_trace(VOS_MODULE_ID_SME,
+                       TRACE_CODE_SME_RX_WDA_MSG, NO_SESSION, pMsg->type));
+
+                if (pMac->sme.sw_pta_resp_cb) {
+                   smsLog(pMac, LOGE, FL("sw pta response"));
+                   pMac->sme.sw_pta_resp_cb(pMsg->bodyval);
+                } else {
+                   smsLog(pMac, LOGE,
+                          FL("sw pta response is NULL"));
+                }
+              break;
+#endif
 
           default:
 
@@ -10072,7 +10128,7 @@ eHalStatus sme_SetMaxTxPower(tHalHandle hHal, tSirMacAddr bssid,
 eHalStatus sme_SetMaxTxPowerPerBand(eCsrBand band, v_S7_t dB,
                   tHalHandle hal)
 {
-    vos_msg_t msg;
+    vos_msg_t __maybe_unused msg;
     eHalStatus status;
     tSmeCmd *set_max_tx_pwr_per_band;
     tpAniSirGlobal mac_ctx = PMAC_STRUCT(hal);
@@ -12050,7 +12106,7 @@ void sme_UpdateEnableSSR(tHalHandle hHal, tANI_BOOLEAN enableSSR)
  * SME API to stringify bonding mode. (hostapd convention)
  */
 
-static const char* sme_CBMode2String( tANI_U32 mode)
+static const char __maybe_unused * sme_CBMode2String( tANI_U32 mode)
 {
    switch (mode)
    {
@@ -13417,7 +13473,7 @@ eHalStatus sme_GetValidChannelsByBand (tHalHandle hHal, tANI_U8 wifiBand,
 {
     eHalStatus status                                   = eHAL_STATUS_SUCCESS;
     tANI_U8 chanList[WNI_CFG_VALID_CHANNEL_LIST_LEN]    = {0};
-    tpAniSirGlobal pMac                                 = PMAC_STRUCT(hHal);
+    tpAniSirGlobal __maybe_unused pMac                  = PMAC_STRUCT(hHal);
     tANI_U8 numChannels                                 = 0;
     tANI_U8 i                                           = 0;
     tANI_U32 totValidChannels                 = WNI_CFG_VALID_CHANNEL_LIST_LEN;
@@ -14404,7 +14460,7 @@ tANI_BOOLEAN sme_handleSetFccChannel(tHalHandle hHal, tANI_U8 fcc_constraint,
             pMac->scan.defer_update_channel_list = true;
         } else {
             /* update the channel list to the firmware */
-            csrUpdateFCCChannelList(pMac);
+            csrUpdateChannelList(pMac);
         }
     }
 
@@ -15389,7 +15445,7 @@ bool sme_is_sta_key_exchange_in_progress(tHalHandle hal, uint8_t session_id)
 
 VOS_STATUS sme_process_msg_callback(tHalHandle hal, vos_msg_t *msg)
 {
-   tpAniSirGlobal mac_ctx = PMAC_STRUCT(hal);
+   tpAniSirGlobal __maybe_unused mac_ctx = PMAC_STRUCT(hal);
    VOS_STATUS status = VOS_STATUS_E_FAILURE;
 
    if (msg == NULL) {
@@ -15472,7 +15528,8 @@ eHalStatus sme_send_mgmt_tx(tHalHandle hal, uint8_t session_id,
 
 #ifdef WLAN_FEATURE_SAE
 eHalStatus sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
-                              uint8_t sae_status)
+                              uint8_t sae_status,
+                              tSirMacAddr peer_mac_addr)
 {
     eHalStatus hal_status = eHAL_STATUS_SUCCESS;
     tpAniSirGlobal mac = PMAC_STRUCT(hal);
@@ -15492,11 +15549,17 @@ eHalStatus sme_handle_sae_msg(tHalHandle hal, uint8_t session_id,
             sae_msg->length = sizeof(*sae_msg);
             sae_msg->session_id = session_id;
             sae_msg->sae_status = sae_status;
+            vos_mem_copy(sae_msg->peer_mac_addr,
+                         peer_mac_addr,
+                         VOS_MAC_ADDR_SIZE);
             vos_message.bodyptr = sae_msg;
             vos_message.type =  eWNI_SME_SEND_SAE_MSG;
             VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_DEBUG,
-                      "SAE: sae_status %d session_id %d", sae_msg->sae_status,
-                      sae_msg->session_id);
+                    "SAE: sae_status %d session_id %d Peer: "
+                    MAC_ADDRESS_STR,
+                    sae_msg->sae_status,
+                    sae_msg->session_id,
+                    MAC_ADDR_ARRAY(sae_msg->peer_mac_addr));
 
             vos_status = vos_mq_post_message(VOS_MQ_ID_PE, &vos_message);
             if (!VOS_IS_STATUS_SUCCESS(vos_status)) {
@@ -15581,4 +15644,73 @@ eHalStatus sme_update_olpc_mode(tHalHandle hHal, bool enable)
     return eHAL_STATUS_SUCCESS;
 }
 
+#ifdef FEATURE_WLAN_SW_PTA
+eHalStatus sme_sw_pta_req(tHalHandle hal,
+			  void (*resp_callback)(uint8_t resp_status),
+			  uint8_t session_id, enum sir_sw_pta_param_type type,
+			  uint8_t length, uint8_t *value)
+{
+	tpAniSirGlobal mac = PMAC_STRUCT(hal);
+	struct sir_sw_pta_req *sw_pta_req;
+	eHalStatus status;
+	tSmeCmd *sme_cmd;
 
+	if (length > SW_PTA_COEX_PARAMS_MAX_LEN) {
+		smsLog(mac, LOGE, FL("Invalid length"));
+		return eHAL_STATUS_FAILURE;
+	}
+
+	sme_cmd = csrGetCommandBuffer(mac);
+	if (!sme_cmd) {
+		smsLog(mac, LOGE, FL("Failed to get buffer for sw pta req"));
+		return eHAL_STATUS_RESOURCES;
+	}
+
+	sw_pta_req = vos_mem_malloc(sizeof(*sw_pta_req));
+	if (!sw_pta_req) {
+		smsLog(mac, LOGE, FL("Failed to allocate memory for sw pta"));
+		csrReleaseCommand(mac, sme_cmd);
+		return eHAL_STATUS_RESOURCES;
+	}
+
+	sw_pta_req->param_type = type;
+	sw_pta_req->length = length;
+	memcpy(sw_pta_req->value, value, length);
+
+	status = sme_AcquireGlobalLock(&mac->sme);
+	if (HAL_STATUS_SUCCESS(status)) {
+		mac->sme.sw_pta_resp_cb = resp_callback;
+
+		smsLog(mac, LOG1, "Posting sw pta request to csr queue");
+		sme_cmd->command = eSmeCommandSwPTAReq;
+		sme_cmd->sessionId = session_id;
+		sme_cmd->u.sw_pta_req = sw_pta_req;
+
+		if (!HAL_STATUS_SUCCESS(csrQueueSmeCommand(mac,
+					sme_cmd, TRUE))) {
+			VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
+				  FL("failed queueing sme command"));
+			sme_ReleaseGlobalLock(&mac->sme);
+			csrReleaseCommand(mac, sme_cmd);
+			vos_mem_free(sw_pta_req);
+			return eHAL_STATUS_FAILURE;
+		}
+	} else {
+		smsLog(mac, LOGE, FL("sme_AcquireGlobalLock failed"));
+		csrReleaseCommand(mac, sme_cmd);
+		vos_mem_free(sw_pta_req);
+		return eHAL_STATUS_FAILURE;
+	}
+
+	sme_ReleaseGlobalLock(&mac->sme);
+	return eHAL_STATUS_SUCCESS;
+}
+
+eHalStatus sme_sco_req(tHalHandle hal,
+		       void (*resp_callback)(uint8_t resp_status),
+		       uint8_t session_id, uint8_t req_status)
+{
+	return sme_sw_pta_req(hal, resp_callback, session_id,
+			      SCO_STATUS, sizeof(req_status), &req_status);
+}
+#endif /* FEATURE_WLAN_SW_PTA */

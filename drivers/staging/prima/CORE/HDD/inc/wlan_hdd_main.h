@@ -2133,8 +2133,19 @@ hdd_remain_on_chan_ctx_t *hdd_get_remain_on_channel_ctx(hdd_context_t *pHddCtx);
 VOS_STATUS wlan_hdd_handle_dfs_chan_scan(hdd_context_t *pHddCtx,
                                    tANI_U8 dfsScanMode);
 
+#ifdef WLAN_LOGGING_SOCK_SVC_ENABLE
 v_U8_t hdd_is_fw_logging_enabled(void);
 v_U8_t hdd_is_fw_ev_logging_enabled(void);
+#else
+static inline v_U8_t hdd_is_fw_logging_enabled(void)
+{
+	return (FALSE);
+}
+static inline v_U8_t hdd_is_fw_ev_logging_enabled(void)
+{
+	return (FALSE);
+}
+#endif
 
 #define HDD_STA_ID_HASH_MULTIPLIER 2
 
@@ -2313,6 +2324,24 @@ void hdd_disable_roaming(hdd_context_t *hdd_ctx);
  * Return: None
  */
 void hdd_restore_roaming(hdd_context_t *hdd_ctx);
+
+/**
+ * hdd_chan_change_notify() - Function to notify about channel change
+ * @adapter: pointer to adapter
+ * @dev: Net device structure
+ * @oper_chan: New operating channel
+ * @phy_mode: phy mode
+ *
+ * This function is used to notify hostapd/supplicant about the channel change
+ *
+ * Return: Success on intimating userspace
+ *
+ */
+VOS_STATUS hdd_chan_change_notify(hdd_adapter_t *adapter,
+        struct net_device *dev,
+        uint8_t oper_chan,
+        eCsrPhyMode phy_mode);
+
 
 int wlan_hdd_check_and_stop_mon(hdd_adapter_t *sta_adapter, bool wait);
 
